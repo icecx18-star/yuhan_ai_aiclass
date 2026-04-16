@@ -71,7 +71,7 @@ if "chat_session" not in st.session_state:
         model="gemini-2.5-flash",
         config={"system_instruction": system_instruction, "temperature": 0.5}
     )
-    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 유한봇입니다. 도서관, 학생식당 위치나 궁금한 학과가 어느 건물에 있는지 편하게 물어보세요!"}]
+    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 유한인공지능전공봇입니다. 궁금한 점이 있다면 물어봐주세요!"}]
 
 # 기존 대화 내용 출력
 for msg in st.session_state.messages:
