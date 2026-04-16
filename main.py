@@ -15,7 +15,7 @@ with col1:
 with col2:
     st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
 with col3:
-    st.link_button("전공 홈페이지", "https://ubiquitous.yuhan.ac.kr/index.do", use_container_width=True)
+    st.link_button("🧠 전공 홈페이지", "https://ubiquitous.yuhan.ac.kr/index.do", use_container_width=True)
 
 
 # --- 2. [업데이트] 캠퍼스 실제 지도 (구글 맵 연동) ---
