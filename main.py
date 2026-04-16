@@ -3,9 +3,9 @@ from google import genai
 import streamlit.components.v1 as components
 
 # 웹 페이지 설정
-st.set_page_config(page_title="2026 유한봇", page_icon="🏫")
+st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫")
 
-st.title("🏫 2026 유한대학교 AI 안내 봇")
+st.title("🏫 2026 유한대 인공지능전공 AI 안내 봇")
 st.caption("캠퍼스 상세 맵 데이터와 실제 지도가 연동된 버전입니다 ⚡")
 
 # --- 1. 상단 바로가기 링크 ---
