@@ -1,75 +1,96 @@
 import streamlit as st
 from google import genai
 import streamlit.components.v1 as components
-import folium
-from streamlit_folium import st_folium
 
+# 웹 페이지 설정
+st.set_page_config(page_title="2026 유한봇", page_icon="🏫")
 
-# 웹 페이지 탭 설정
-st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫")
+st.title("🏫 2026 유한대학교 AI 안내 봇")
+st.caption("캠퍼스 상세 맵 데이터와 실제 지도가 연동된 버전입니다 ⚡")
 
-st.title("🏫 2026 유한인공지능전공 AI 안내 봇")
-st.caption("베타 테스트 기간입니다.\n 본인의 학번 학과등 개인정보는 입력하지 마세요 학습 중이라 개인정보가 수집될 수 있습니다!!")
-
-
-# ==========================================
-# 🔗 [추가된 부분] 상단 바로가기 링크 버튼 영역
-# ==========================================
-col1, col2 = st.columns(2) # 화면을 정확히 반(1:1)으로 나눕니다.
-
+# --- 1. 상단 바로가기 링크 ---
+col1, col2 = st.columns(2)
 with col1:
-    # use_container_width=True를 주면 버튼이 화면 반쪽을 꽉 채우게 예쁘게 늘어납니다.
     st.link_button("📖 학과 안내", "https://ubiquitous.yuhan.ac.kr/ibuilder.do?menu_idx=1329", use_container_width=True)
-
 with col2:
     st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
 
-st.divider() # 버튼과 채팅창을 시각적으로 분리해주는 얇은 회색 선을 긋습니다.
-# ==========================================
+# --- 2. [업데이트] 캠퍼스 실제 지도 (구글 맵 연동) ---
+with st.expander("📍 유한대학교 캠퍼스 지도 확인하기"):
+    # 유한대학교의 실제 좌표 및 검색어가 포함된 구글 지도 iframe 코드입니다.
+    map_html = """
+    <iframe width="100%" height="400" style="border:0; border-radius: 10px;" loading="lazy" allowfullscreen
+    src="https://maps.google.com/maps?q=유한대학교&t=&z=16&ie=UTF8&iwloc=&output=embed">
+    </iframe>
+    """
+    components.html(map_html, height=400)
 
-# 주의: 깃허브 배포 시에는 st.secrets["GEMINI_API_KEY"] 방식을 사용하세요.
-API_KEY = "여기에_API_키를_입력하세요" 
+st.divider()
 
-# API 클라이언트 캐싱 (연결 끊김 에러 방지)
+# --- 3. 🧠 답변 기억 창고 (Cache) ---
+@st.cache_resource
+def get_qa_cache():
+    return {}
+
+qa_cache = get_qa_cache()
+
+# --- 4. 지식 창고 로드 (yuhan_info.txt 파일 읽기) ---
+@st.cache_data
+def load_knowledge_base():
+    try:
+        with open("yuhan_info.txt", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "현재 수집된 상세 학교 정보가 없습니다."
+
+knowledge_base = load_knowledge_base()
+
+# API 키 및 클라이언트 설정
+API_KEY = st.secrets["GEMINI_API_KEY"] if "GEMINI_API_KEY" in st.secrets else "여기에_API_키를_입력하세요"
+
 @st.cache_resource
 def get_client():
     return genai.Client(api_key=API_KEY)
 
 client = get_client()
 
-# 대화 기록 저장소 및 채팅 세션 초기화
+# 대화 세션 및 시스템 프롬프트 초기화
 if "chat_session" not in st.session_state:
-    system_instruction = """
-너는 유한대학교의 친절한 AI 조교 '유한인공지능전공봇'이야.
-학생들의 질문에 친절하고 정확하게 답변해줘.
-2026학년도 대학생활 안내를 기준으로 답변하며, 모르는 내용은 학교 홈페이지를 참고하라고 안내해.
+    system_instruction = f"""
+너는 유한대학교의 AI 조교 '유한봇'이야. 
+아래 제공된 [유한대학교 캠퍼스 정보]를 바탕으로 학생들에게 친절하고 정확하게 답변해줘. 
+문서에 없는 내용은 "제가 아직 모르는 내용입니다. 학교 홈페이지나 학과 사무실에 문의해 주세요."라고 정중하게 안내해.
+
+[유한대학교 캠퍼스 정보]
+{knowledge_base}
 """
     st.session_state.chat_session = client.chats.create(
         model="gemini-2.5-flash",
-        config={
-            "system_instruction": system_instruction,
-            "temperature": 0.7
-        }
+        config={"system_instruction": system_instruction, "temperature": 0.5}
     )
-    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 유한봇입니다. 상단의 메뉴를 클릭하거나 궁금한 점을 질문해 주세요!"}]
+    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 유한봇입니다. 도서관, 학생식당 위치나 궁금한 학과가 어느 건물에 있는지 편하게 물어보세요!"}]
 
-# 기존 대화 내용 화면에 그리기
+# 기존 대화 내용 출력
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 # 사용자 입력 처리
-if prompt := st.chat_input("질문을 입력하세요... (예: 과방 위치가 어디야?)"):
+if prompt := st.chat_input("질문을 입력하세요... (예: 컴퓨터소프트웨어전공은 몇 호관이야?)"):
     with st.chat_message("user"):
         st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # AI 답변 생성 및 화면에 출력
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         try:
-            response = st.session_state.chat_session.send_message(prompt)
-            bot_reply = response.text
+            # 캐시(기억) 검사
+            if prompt in qa_cache:
+                bot_reply = "⚡ " + qa_cache[prompt]
+            else:
+                response = st.session_state.chat_session.send_message(prompt)
+                bot_reply = response.text
+                qa_cache[prompt] = bot_reply 
             
             message_placeholder.markdown(bot_reply)
             st.session_state.messages.append({"role": "assistant", "content": bot_reply})
