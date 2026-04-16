@@ -6,10 +6,11 @@ from streamlit_folium import st_folium
 
 
 # 웹 페이지 탭 설정
-st.set_page_config(page_title="2026 유한봇", page_icon="🏫")
+st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫")
 
-st.title("🏫 2026 유한대학교 AI 안내 봇")
-st.caption("학과 홈페이지 바로가기 링크가 추가된 버전입니다.")
+st.title("🏫 2026 유한인공지능전공 AI 안내 봇")
+st.caption("베타 테스트 기간입니다.\n 본인의 학번 학과등 개인정보는 입력하지 마세요 학습 중이라 개인정보가 수집될 수 있습니다!!")
+
 
 # ==========================================
 # 🔗 [추가된 부분] 상단 바로가기 링크 버튼 영역
