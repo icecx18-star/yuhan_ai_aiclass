@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 # 웹 페이지 설정
 st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫")
 
-st.title("🏫 2026 유한대 인공지능전공 AI 안내 봇")
+st.title("🏫 2026 유한대 인공지능전공 AI 챗봇")
 st.caption("아직 베타버전입니다. ai모델이 학습중이므로 본인의 개인정보(학번, 주민등록번호, 전화번호, 이름)은 입력하지 마세요!!")
 
 # --- 1. 상단 바로가기 링크 ---
