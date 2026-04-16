@@ -4,41 +4,37 @@ import streamlit.components.v1 as components
 import folium
 from streamlit_folium import st_folium
 
+
 # 웹 페이지 탭 설정
 st.set_page_config(page_title="2026 유한봇", page_icon="🏫")
 
 st.title("🏫 2026 유한대학교 AI 안내 봇")
-st.caption("연결 끊김(Client Closed) 문제를 완벽히 해결한 버전입니다.")
+st.caption("학과 홈페이지 바로가기 링크가 추가된 버전입니다.")
 
-# Streamlit의 안전한 금고(Secrets)에서 키를 꺼내오도록 변경합니다.
-API_KEY = st.secrets["GEMINI_API_KEY"]
+# ==========================================
+# 🔗 [추가된 부분] 상단 바로가기 링크 버튼 영역
+# ==========================================
+col1, col2 = st.columns(2) # 화면을 정확히 반(1:1)으로 나눕니다.
 
-# ---------------------------------------------------------
-# [핵심 변경 사항] API 클라이언트를 한 번만 생성하고 캐싱(유지)합니다.
+with col1:
+    # use_container_width=True를 주면 버튼이 화면 반쪽을 꽉 채우게 예쁘게 늘어납니다.
+    st.link_button("📖 학과 안내", "https://ubiquitous.yuhan.ac.kr/ibuilder.do?menu_idx=1329", use_container_width=True)
+
+with col2:
+    st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
+
+st.divider() # 버튼과 채팅창을 시각적으로 분리해주는 얇은 회색 선을 긋습니다.
+# ==========================================
+
+# 주의: 깃허브 배포 시에는 st.secrets["GEMINI_API_KEY"] 방식을 사용하세요.
+API_KEY = "여기에_API_키를_입력하세요" 
+
+# API 클라이언트 캐싱 (연결 끊김 에러 방지)
 @st.cache_resource
 def get_client():
     return genai.Client(api_key=API_KEY)
 
 client = get_client()
-# ---------------------------------------------------------
-
-with st.expander("📍 캠퍼스 주요 시설 위치", expanded=False):
-    # 유한대학교 중심 좌표 (대략적인 위치)
-    yuhan_location = [37.4851, 126.8244] 
-    
-    # 지도 생성 (초기 확대 수준 16)
-    m = folium.Map(location=yuhan_location, zoom_start=16)
-    
-    # 원하는 곳에 마커 찍기
-    folium.Marker(
-        [37.4851, 126.8244], 
-        popup="유한대학교 본관", 
-        tooltip="본관 클릭",
-        icon=folium.Icon(color="blue", icon="info-sign")
-    ).add_to(m)
-    
-    # 스트림릿 화면에 지도 그리기
-    st_folium(m, width=700, height=400)
 
 # 대화 기록 저장소 및 채팅 세션 초기화
 if "chat_session" not in st.session_state:
@@ -54,7 +50,7 @@ if "chat_session" not in st.session_state:
             "temperature": 0.7
         }
     )
-    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 유한봇입니다. 2026학년도 대학생활에 대해 무엇이든 물어보세요!"}]
+    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 유한봇입니다. 상단의 메뉴를 클릭하거나 궁금한 점을 질문해 주세요!"}]
 
 # 기존 대화 내용 화면에 그리기
 for msg in st.session_state.messages:
@@ -62,7 +58,7 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 # 사용자 입력 처리
-if prompt := st.chat_input("질문을 입력하세요... (예: 장학금 기준이 뭐야?)"):
+if prompt := st.chat_input("질문을 입력하세요... (예: 과방 위치가 어디야?)"):
     with st.chat_message("user"):
         st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
