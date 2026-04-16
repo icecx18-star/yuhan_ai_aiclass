@@ -9,11 +9,14 @@ st.title("🏫 2026 유한대 인공지능전공 AI 안내 봇")
 st.caption("아직 베타버전입니다. ai모델이 학습중이므로 본인의 개인정보(학번, 주민등록번호, 전화번호, 이름)은 입력하지 마세요!!")
 
 # --- 1. 상단 바로가기 링크 ---
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 with col1:
     st.link_button("📖 학과 안내", "https://ubiquitous.yuhan.ac.kr/ibuilder.do?menu_idx=1329", use_container_width=True)
 with col2:
     st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
+with col3:
+    st.link_button("전공 홈페이지", "https://ubiquitous.yuhan.ac.kr/index.do", use_container_width=True)
+
 
 # --- 2. [업데이트] 캠퍼스 실제 지도 (구글 맵 연동) ---
 with st.expander("📍 유한대학교 캠퍼스 지도 확인하기"):
