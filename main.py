@@ -78,11 +78,8 @@ client = get_client()
 
 # [백업 완료] 작동이 확인된 모델 리스트
 MODELS_TO_TRY = [
-    "google/gemini-2.0-flash-001",           # 1순위: 유료 결제 전용 (빠름/안정적)
-    "meta-llama/llama-3.1-8b-instruct:free", # 2순위: 안정적인 무료 모델
-    "qwen/qwen-2.5-72b-instruct:free",       # 3순위: 한국어 특화
-    "google/gemini-flash-1.5-8b:free",       # 4순위: 속도 위주
-    "mistralai/pixtral-12b:free"             # 5순위: 백업
+    "google/gemini-2.0-flash-001",
+    "openrouter/free" 
 ]
 
 if "messages" not in st.session_state:
