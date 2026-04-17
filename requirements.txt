@@ -1,4 +1,9 @@
 streamlit
 google-genai
-folium
-streamlit-folium
+langchain
+langchain-community
+langchain-huggingface
+chromadb
+sentence-transformers
+torchvision
+pysqlite3-binary
