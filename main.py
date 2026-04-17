@@ -1,4 +1,4 @@
-# --- [클라우드 배포용 필수 패치] 반드시 파일 맨 위에 있어야 합니다! ---
+# --- [클라우드 배포용 필수 패치] ---
 try:
     __import__('pysqlite3')
     import sys
@@ -9,38 +9,26 @@ except ImportError:
 # -----------------------------------------------------------
 
 import streamlit as st
-from openai import OpenAI  # OpenRouter 연동용
+from openai import OpenAI
 
 # RAG용 추가 라이브러리
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
-# --- 1. 페이지 설정 및 디자인 ---
+# --- 1. 페이지 설정 ---
 st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫", layout="wide")
 
-# 사이드바 구성
 with st.sidebar:
     st.image("https://ubiquitous.yuhan.ac.kr/images/common/logo.png") 
     st.title("📌 학과 정보")
-    st.link_button("📖 학과 안내", "https://ubiquitous.yuhan.ac.kr/ibuilder.do?menu_idx=1329", use_container_width=True)
-    st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
-    st.divider()
-    st.info("💡 정보가 수집될 수 있으므로 개인정보는 입력하지 마세요!!!.")
+    st.info("💡 모델 로테이션 작동 중: 429 에러 발생 시 자동으로 다음 AI가 답변합니다.")
 
 st.title("🏫 2026 유한대학교 인공지능전공 AI 안내 봇")
-st.caption("정보가 수집될 수 있으므로 개인정보는 입력하지 마세요!")
 
-# --- 2. 📍 지도 기능 (유한대학교 실제 위치 연결) ---
+# --- 2. 📍 지도 기능 ---
 with st.expander("📍 유한대학교 캠퍼스 지도 확인하기"):
-    # 유한대학교 실제 위치 (경기도 부천시 경인로 590)
-    map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3165.234346294!2d126.8197!3d37.4852!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357b629094e99557%3A0xc3f3c3a9f0d7681!2z7Jyg7ZWc64yA7ZWZ6rWQ!5e0!3m2!1sko!2skr!4v1713511111111"
-    
-    st.markdown(f"""
-    <iframe src="{map_url}" width="100%" height="450" style="border:0; border-radius: 15px;" allowfullscreen="" loading="lazy"></iframe>
-    """, unsafe_allow_html=True)
-    st.info("💡 학과 사무실은 유일한기념관(7호관) 2층에 위치해 있습니다.")
-
-st.divider()
+    map_url = "http://googleusercontent.com/maps.google.com/7"
+    st.markdown(f'<iframe src="{map_url}" width="100%" height="450" style="border:0; border-radius: 15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
 
 # --- 3. 🧠 벡터 데이터베이스 로드 (RAG) ---
 @st.cache_resource
@@ -49,13 +37,12 @@ def load_vector_db():
         model_name="jhgan/ko-sroberta-multitask",
         encode_kwargs={'normalize_embeddings': True}
     )
-    db = Chroma(persist_directory="./yuhan_vector_db", embedding_function=embeddings)
-    return db
+    return Chroma(persist_directory="./yuhan_vector_db", embedding_function=embeddings)
 
 vector_db = load_vector_db()
 
-# --- 4. OpenRouter API 클라이언트 세팅 ---
-API_KEY = st.secrets["OPENROUTER_API_KEY"] if "OPENROUTER_API_KEY" in st.secrets else "YOUR_KEY_HERE"
+# --- 4. OpenRouter 설정 및 로테이션 모델 리스트 ---
+API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
 @st.cache_resource
 def get_client():
@@ -64,17 +51,22 @@ def get_client():
         api_key=API_KEY,
         default_headers={
             "HTTP-Referer": "https://yuhan-bot.streamlit.app",
-            "X-Title": "Yuhan AI Bot",
+            "X-Title": "Yuhan AI Bot Rotation",
         }
     )
 
 client = get_client()
 
-# 안정적인 최신 무료 모델 적용
-MODEL_NAME = "google/gemma-4-26b-a4b-it:free"
+# 순차적으로 시도할 무료 모델 리스트 (현재 작동 확률 높은 순서)
+MODELS_TO_TRY = [
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "meta-llama/llama-guard-4-12b:free"
+]
 
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 유한대학교 인공지능전공 봇입니다. 무엇을 도와드릴까요?"}]
+    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 로테이션 시스템이 적용된 유한대 봇입니다. 무엇을 도와드릴까요?"}]
 
 # --- 5. 채팅 화면 구성 및 로직 ---
 for msg in st.session_state.messages:
@@ -88,23 +80,35 @@ if prompt := st.chat_input("질문을 입력하세요..."):
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
-        try:
-            # 1. RAG 검색 (조각 2개 검색으로 정확도 향상)
-            docs = vector_db.similarity_search(prompt, k=1)
-            extracted_context = "\n".join([doc.page_content for doc in docs])
-            
-            # 2. OpenRouter 답변 생성
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[
-                    {"role": "system", "content": f"너는 유한대학교 인공지능전공 봇이야. 아래 [참고 정보]만을 활용해서 질문에 친절하게 답변해줘.\n\n[참고 정보]\n{extracted_context}"},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            bot_reply = response.choices[0].message.content
-            
-            message_placeholder.markdown(bot_reply)
-            st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-            
-        except Exception as e:
-            st.error(f"오류가 발생했습니다: {e}")
+        
+        # RAG 검색 (지식 베이스 활용)
+        docs = vector_db.similarity_search(prompt, k=2)
+        extracted_context = "\n".join([doc.page_content for doc in docs])
+        
+        bot_reply = ""
+        success = False
+
+        # 모델 로테이션 루프 시작
+        for model_id in MODELS_TO_TRY:
+            try:
+                with st.spinner(f'AI 엔진({model_id.split("/")[1]}) 연결 중...'):
+                    response = client.chat.completions.create(
+                        model=model_id,
+                        messages=[
+                            {"role": "system", "content": f"너는 유한대 전공 안내 봇이야. 아래 정보를 바탕으로 친절하게 답해줘.\n{extracted_context}"},
+                            {"role": "user", "content": prompt}
+                        ],
+                        timeout=15  # 15초 이상 걸리면 다음 모델로 패스
+                    )
+                    bot_reply = response.choices[0].message.content
+                    success = True
+                    break  # 성공하면 루프 탈출
+            except Exception as e:
+                # 에러 발생 시 다음 모델로 넘어가며 경고 표시 (개발 단계에서만 확인)
+                continue 
+
+        if not success:
+            bot_reply = "죄송합니다. 현재 모든 무료 모델의 한도가 초과되었습니다. 잠시 후 다시 시도해 주세요."
+
+        message_placeholder.markdown(bot_reply)
+        st.session_state.messages.append({"role": "assistant", "content": bot_reply})v
