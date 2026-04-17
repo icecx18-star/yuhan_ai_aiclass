@@ -6,3 +6,5 @@ langchain-huggingface
 chromadb
 sentence-transformers
 pysqlite3-binary
+# 아래 버전을 추가하여 충돌을 방지합니다.
+protobuf==3.20.3
