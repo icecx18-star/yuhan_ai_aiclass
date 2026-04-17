@@ -9,9 +9,9 @@ except ImportError:
 # -----------------------------------------------------------
 
 import streamlit as st
-from openai import OpenAI
 
-# RAG용 라이브러리
+# 외부 AI(OpenAI) 호출 라이브러리 완전 삭제
+# 로컬 검색용 라이브러리만 남김
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
@@ -27,29 +27,18 @@ with st.sidebar:
     st.link_button("🏫 유한대학교 포털", "https://portal.yuhan.ac.kr", use_container_width=True)
     
     st.divider()
-    
-    # 💳 단순 질문 횟수 제한 (세션당 15회)
-    if "usage_count" not in st.session_state:
-        st.session_state.usage_count = 0
+    st.success("💡 현재 봇은 외부 서버 의존 없이 로컬 데이터베이스를 기반으로 작동하여 끊김이 없습니다.")
 
-    MAX_QUESTIONS = 15
-    left_q = MAX_QUESTIONS - st.session_state.usage_count
-    
-    st.write(f"💬 남은 질문 횟수: **{max(0, left_q)}회**")
-    st.progress(max(0.0, min(1.0, st.session_state.usage_count / MAX_QUESTIONS)))
-    st.info(f"💡 브라우저를 새로고침하면 횟수가 초기화됩니다.")
+st.title("🏫 2026 유한대학교 인공지능전공 안내 봇")
 
-st.title("🏫 2026 유한대학교 인공지능전공 AI 안내 봇")
-
-# --- 2. 📍 지도 기능 (업로드한 이미지 사용) ---
+# --- 2. 📍 지도 기능 ---
 with st.expander("📍 유한대학교 캠퍼스 지도 확인하기"):
-    # 파일명이 GitHub에 올린 이미지와 정확히 일치해야 합니다.
     st.image("KakaoTalk_20260417_235353575.png", caption="유한대학교 캠퍼스 맵", use_container_width=True)
     st.info("학과 사무실: 유일한기념관(7번) 2층")
 
 st.divider()
 
-# --- 3. 🧠 벡터 데이터베이스 로드 (RAG) ---
+# --- 3. 🧠 벡터 데이터베이스 로드 (외부 인터넷 불필요) ---
 @st.cache_resource
 def load_vector_db():
     embeddings = HuggingFaceEmbeddings(
@@ -60,79 +49,47 @@ def load_vector_db():
 
 vector_db = load_vector_db()
 
-# --- 4. OpenRouter API 설정 ---
-API_KEY = st.secrets["OPENROUTER_API_KEY"]
-
-@st.cache_resource
-def get_client():
-    return OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=API_KEY,
-        default_headers={
-            "HTTP-Referer": "https://yuhan-bot.streamlit.app",
-            "X-Title": "Yuhan AI Bot Final Stable",
-        }
-    )
-
-client = get_client()
-
-# [백업 완료] 작동이 확인된 모델 리스트
-MODELS_TO_TRY = [
-    "google/gemini-2.0-flash-001",
-    "openrouter/free" 
-]
-
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 유한대학교 인공지능전공 봇입니다. 무엇을 도와드릴까요?"}]
+    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 유한대학교 인공지능전공 관련 정보를 빠르고 정확하게 찾아드립니다. 무엇이 궁금하신가요?"}]
 
-# --- 5. 채팅 화면 구성 및 로직 ---
+# --- 4. 채팅 화면 구성 ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
+# --- 5. 스마트 검색 로직 (AI 생성 대신 정확한 문서 매칭) ---
 if prompt := st.chat_input("질문을 입력하세요..."):
-    # 횟수 제한 체크
-    if st.session_state.usage_count >= MAX_QUESTIONS:
-        st.error(f"⚠️ 오늘의 질문 한도({MAX_QUESTIONS}회)를 모두 사용하셨습니다. 새로고침 후 다시 이용해 주세요.")
-    else:
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-        with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            
-            # RAG 데이터 검색
-            docs = vector_db.similarity_search(prompt, k=2)
-            context = "\n".join([d.page_content for d in docs])
-            
-            final_reply = ""
-            is_success = False
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        
+        # 1. 자주 묻는 질문(FAQ) 즉시 답변 (키워드 매칭)
+        if "사무실" in prompt or "전화번호" in prompt or "연락처" in prompt:
+            final_reply = "📞 **학과 사무실 정보**\n\n* **위치:** 유일한기념관(7호관) 2층\n* **전화번호:** 02-2610-0783\n* 캠퍼스 지도는 위쪽 탭을 눌러 확인해 주세요!"
+        
+        elif "장학" in prompt:
+            final_reply = "💰 **장학금 안내**\n\n유한대학교 포털 홈페이지에서 [장학 공지사항]을 확인하시는 것이 가장 빠릅니다. 성적 우수 장학금 외에도 다양한 국가/교내 장학금이 있으니 학과 사무실로 문의해 주셔도 좋습니다."
+        
+        # 2. 벡터 DB 검색 (문서에서 가장 유사한 부분 3개를 찾아 그대로 보여줌)
+        else:
+            with st.spinner("관련 학과 규정/안내 문서를 검색 중입니다..."):
+                docs = vector_db.similarity_search(prompt, k=3)
+                
+                final_reply = "🔍 **질문하신 내용과 가장 관련 있는 학과 정보입니다:**\n\n"
+                
+                # 중복 방지를 위해 검색된 텍스트 합치기
+                unique_texts = []
+                for i, doc in enumerate(docs):
+                    text = doc.page_content.strip()
+                    if text not in unique_texts:
+                        unique_texts.append(text)
+                        final_reply += f"> {text}\n\n"
+                
+                final_reply += "---\n💡 더 자세한 내용은 상단의 학과 홈페이지를 참고하시거나 학과 사무실로 문의해 주세요."
 
-            # 모델 로테이션 실행
-            for model_id in MODELS_TO_TRY:
-                try:
-                    with st.spinner(f"AI 응답 생성 중... ({model_id.split('/')[-1]})"):
-                        response = client.chat.completions.create(
-                            model=model_id,
-                            messages=[
-                                {"role": "system", "content": f"너는 유한대학교 인공지능전공 안내 봇이야. 아래 정보를 바탕으로 답변해줘.\n{context}"},
-                                {"role": "user", "content": prompt}
-                            ],
-                            timeout=15
-                        )
-                        final_reply = response.choices[0].message.content
-                        is_success = True
-                        st.session_state.usage_count += 1
-                        break
-                except Exception as e:
-                    # 무엇이 문제인지 개발자에게만 살짝 알림
-                    st.toast(f"⚠️ {model_id.split('/')[-1]} 연결 실패")
-                    continue
-
-            if not is_success:
-                final_reply = "현재 모든 AI 서버가 응답하지 않습니다. 잠시 후 다시 질문해 주세요."
-
-            message_placeholder.markdown(final_reply)
-            st.session_state.messages.append({"role": "assistant", "content": final_reply})
-            st.rerun()
+        # 결과 출력
+        message_placeholder.markdown(final_reply)
+        st.session_state.messages.append({"role": "assistant", "content": final_reply})
