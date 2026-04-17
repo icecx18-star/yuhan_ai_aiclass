@@ -111,4 +111,4 @@ if prompt := st.chat_input("질문을 입력하세요..."):
             bot_reply = "죄송합니다. 현재 모든 무료 모델의 한도가 초과되었습니다. 잠시 후 다시 시도해 주세요."
 
         message_placeholder.markdown(bot_reply)
-        st.session_state.messages.append({"role": "assistant", "content": bot_reply})v
+        st.session_state.messages.append({"role": "assistant", "content": bot_reply})
