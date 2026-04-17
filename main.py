@@ -47,7 +47,7 @@ def get_client(): return genai.Client(api_key=API_KEY)
 client = get_client()
 
 if "chat_session" not in st.session_state:
-    st.session_state.chat_session = client.chats.create(model="gemini-2.5-flash", config={"temperature": 0.5})
+    st.session_state.chat_session = client.chats.create(model="gemini-2.0-flash", config={"temperature": 0.5})
     st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 인공지능전공 봇입니다. 무엇을 도와드릴까요?"}]
 
 # --- 4. 채팅 화면 구성 및 로직 ---
