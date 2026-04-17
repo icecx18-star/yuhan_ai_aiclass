@@ -23,7 +23,7 @@ with st.sidebar:
     st.title("📌 학과 주요 링크")
     
     # 학과 관련 사이트 링크 복구 
-    st.link_button("📖 학과 안내 홈페이지", "https://ubiquitous.yuhan.ac.kr/ibuilder.do?menu_idx=1329", use_container_width=True)
+    st.link_button("📖 학과 안내 홈페이지", "https://ubiquitous.yuhan.ac.kr/index.do", use_container_width=True)
     st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
     st.link_button("🏫 유한대학교 포털", "https://portal.yuhan.ac.kr", use_container_width=True)
     
