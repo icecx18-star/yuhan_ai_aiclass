@@ -25,10 +25,10 @@ with st.sidebar:
     st.link_button("📖 학과 안내", "https://ubiquitous.yuhan.ac.kr/ibuilder.do?menu_idx=1329", use_container_width=True)
     st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
     st.divider()
-    st.info("💡 OpenRouter 서버를 통해 24시간 안정적으로 운영됩니다.")
+    st.info("💡 정보가 수집될 수 있으므로 개인정보는 입력하지 마세요!!!.")
 
 st.title("🏫 2026 유한대학교 인공지능전공 AI 안내 봇")
-st.caption("실시간 지도와 오픈소스 모델이 결합된 최신 버전입니다 ⚡")
+st.caption("정보가 수집될 수 있으므로 개인정보는 입력하지 마세요!")
 
 # --- 2. 📍 지도 기능 (유한대학교 실제 위치 연결) ---
 with st.expander("📍 유한대학교 캠퍼스 지도 확인하기"):
