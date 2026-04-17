@@ -7,7 +7,7 @@ from langchain_community.vectorstores import Chroma
 
 st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫")
 st.title("🏫 2026 유한대학교 인공지능전공 AI 안내 봇")
-st.caption("GPU 로컬 벡터 검색(RAG)이 적용된 초고속 버전입니다 ⚡")
+st.caption("정보가 수집될 수 있으니 본인의 개인정보는 입력하지마세요!!")
 
 # --- 1. 상단 링크 & 지도 ---
 col1, col2 = st.columns(2)
