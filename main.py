@@ -96,7 +96,7 @@ for msg in st.session_state.messages:
 if prompt := st.chat_input("질문을 입력하세요..."):
     # 질문 횟수 체크
     if st.session_state.usage_count >= MAX_QUESTIONS:
-        st.error(f"⚠️ 사용 한도({MAX_QUESTIONS}회)를 초과했습니다. 크레딧 보호를 위해 질문이 제한됩니다.")
+        st.error(f"⚠️ 사용 한도({MAX_QUESTIONS}회)를 초과했습니다.")
     else:
         with st.chat_message("user"):
             st.markdown(prompt)
