@@ -68,7 +68,7 @@ if "chat_session" not in st.session_state:
 {knowledge_base}
 """
     st.session_state.chat_session = client.chats.create(
-        model="gemini-2.5-flash",
+        model="gemini-2.0-flash",
         config={"system_instruction": system_instruction, "temperature": 0.5}
     )
     st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 저는 유한인공지능전공봇입니다. 궁금한 점이 있다면 물어봐주세요!"}]
