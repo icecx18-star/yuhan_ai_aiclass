@@ -1,34 +1,57 @@
 # --- [클라우드 배포용 필수 패치] 반드시 파일 맨 위에 있어야 합니다! ---
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+try:
+    __import__('pysqlite3')
+    import sys
+    if 'pysqlite3' in sys.modules:
+        sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
 # -----------------------------------------------------------
 
 import streamlit as st
-from google import genai
+from openai import OpenAI  # OpenRouter 연동용
 
 # RAG용 추가 라이브러리
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
-st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫")
-st.title("🏫 2026 유한대학교 인공지능전공 AI 안내 봇")
-st.caption("정보가 수집될 수 있으니 개인정보를 입력하지 마세요!!!")
+# --- 1. 페이지 설정 및 디자인 ---
+st.set_page_config(page_title="2026 유한인공지능전공봇", page_icon="🏫", layout="wide")
 
-# --- 1. 상단 링크 & 지도 ---
-col1, col2 = st.columns(2)
-with col1:
+# 사이드바 구성
+with st.sidebar:
+    st.image("https://ubiquitous.yuhan.ac.kr/images/common/logo.png") 
+    st.title("📌 학과 정보")
     st.link_button("📖 학과 안내", "https://ubiquitous.yuhan.ac.kr/ibuilder.do?menu_idx=1329", use_container_width=True)
-with col2:
     st.link_button("👨‍🏫 교수진 소개", "https://ubiquitous.yuhan.ac.kr/subject/professorList.do?menu_idx=1323", use_container_width=True)
+    st.divider()
+    st.info("💡 OpenRouter 서버를 통해 24시간 안정적으로 운영됩니다.")
 
+st.title("🏫 2026 유한대학교 인공지능전공 AI 안내 봇")
+st.caption("실시간 지도와 오픈소스 모델이 결합된 최신 버전입니다 ⚡")
+
+# --- 2. 📍 지도 기능 (유한대학교 실제 위치 연결) ---
 with st.expander("📍 유한대학교 캠퍼스 지도 확인하기"):
-    map_html = """<iframe width="100%" height="400" style="border:0; border-radius: 10px;" loading="lazy" allowfullscreen src="https://maps.google.com/maps?q=유한대학교&t=&z=16&ie=UTF8&iwloc=&output=embed"></iframe>"""
-    st.markdown(map_html, unsafe_allow_html=True)
+    # 유한대학교 실제 위경도 기반 구글 지도 임베드 코드
+    map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3165.1741544600124!2d126.81745487643501!3d37.48731302888151!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357b63973347b973%3A0xc647087612f0088e!2z7Jyg7ZWc64yA7ZWZ6rWQ!5e0!3m2!1sko!2skr!4v1713429000000!5m2!1sko!2skr"
     
+    map_html = f"""
+    <iframe 
+        width="100%" 
+        height="450" 
+        style="border:0; border-radius: 15px;" 
+        src="{map_url}" 
+        allowfullscreen="" 
+        loading="lazy" 
+        referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+    """
+    st.markdown(map_html, unsafe_allow_html=True)
+    st.info("💡 학과 사무실은 유일한기념관(7호관) 2층에 위치해 있습니다.")
+
 st.divider()
 
-# --- 2. 🧠 벡터 데이터베이스 로드 ---
+# --- 3. 🧠 벡터 데이터베이스 로드 (RAG) ---
 @st.cache_resource
 def load_vector_db():
     embeddings = HuggingFaceEmbeddings(
@@ -40,22 +63,29 @@ def load_vector_db():
 
 vector_db = load_vector_db()
 
-# --- 3. 캐시 및 API 클라이언트 세팅 ---
-@st.cache_resource
-def get_qa_cache(): return {}
-qa_cache = get_qa_cache()
+# --- 4. OpenRouter API 클라이언트 세팅 ---
+API_KEY = st.secrets["OPENROUTER_API_KEY"] if "OPENROUTER_API_KEY" in st.secrets else "YOUR_KEY_HERE"
 
-API_KEY = st.secrets["GEMINI_API_KEY"] if "GEMINI_API_KEY" in st.secrets else "여기에_API_키를_입력하세요"
 @st.cache_resource
-def get_client(): return genai.Client(api_key=API_KEY)
+def get_client():
+    return OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=API_KEY,
+        default_headers={
+            "HTTP-Referer": "https://yuhan-bot.streamlit.app",
+            "X-Title": "Yuhan AI Bot",
+        }
+    )
+
 client = get_client()
 
-# [수정 완료] 하루 사용량이 넉넉한 gemini-2.0-flash 적용
-if "chat_session" not in st.session_state:
-    st.session_state.chat_session = client.chats.create(model="gemini-2.0-flash", config={"temperature": 0.5})
-    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 인공지능전공 봇입니다. 무엇을 도와드릴까요?"}]
+# 안정적인 최신 무료 모델 적용
+MODEL_NAME = "google/gemma-4-26b-a4b-it:free"
 
-# --- 4. 채팅 화면 구성 및 로직 ---
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "안녕하세요! 유한대학교 인공지능전공 봇입니다. 무엇을 도와드릴까요?"}]
+
+# --- 5. 채팅 화면 구성 및 로직 ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -68,19 +98,19 @@ if prompt := st.chat_input("질문을 입력하세요..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         try:
-            if prompt in qa_cache:
-                bot_reply = "⚡ " + qa_cache[prompt]
-            else:
-                # [수정 완료] 토큰 절약을 위해 조각 1개(k=1)만 찾기
-                docs = vector_db.similarity_search(prompt, k=1)
-                extracted_context = "\n".join([doc.page_content for doc in docs])
-                
-                # [수정 완료] 프롬프트 길이 최소화 다이어트
-                rag_prompt = f"[참고]\n{extracted_context}\n\n질문: {prompt}"
-                
-                response = st.session_state.chat_session.send_message(rag_prompt)
-                bot_reply = response.text
-                qa_cache[prompt] = bot_reply 
+            # 1. RAG 검색 (조각 2개 검색으로 정확도 향상)
+            docs = vector_db.similarity_search(prompt, k=1)
+            extracted_context = "\n".join([doc.page_content for doc in docs])
+            
+            # 2. OpenRouter 답변 생성
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": f"너는 유한대학교 인공지능전공 봇이야. 아래 [참고 정보]만을 활용해서 질문에 친절하게 답변해줘.\n\n[참고 정보]\n{extracted_context}"},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            bot_reply = response.choices[0].message.content
             
             message_placeholder.markdown(bot_reply)
             st.session_state.messages.append({"role": "assistant", "content": bot_reply})

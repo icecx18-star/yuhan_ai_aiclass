@@ -1,10 +1,8 @@
 streamlit
-google-genai
+openai
 langchain
 langchain-community
 langchain-huggingface
 chromadb
 sentence-transformers
-torchvision
 pysqlite3-binary
-protobuf==3.20.3
